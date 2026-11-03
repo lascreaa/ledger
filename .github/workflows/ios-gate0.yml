@@ -1,0 +1,36 @@
+name: iOS Gate 0 unsigned build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods dependencies
+        run: pod install --project-directory=ios
+      - name: Build unsigned device app
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ios/LedgerGate0.xcworkspace -scheme LedgerGate0 -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
+      - name: Package unsigned IPA candidate
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/LedgerGate0.app Payload/
+          zip -qry Ledger-Gate0-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ledger-gate0-ios
+          path: |
+            Ledger-Gate0-unsigned.ipa
+            xcodebuild.log
+          if-no-files-found: warn
