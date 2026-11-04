@@ -19,6 +19,8 @@ jobs:
           xcodebuild -version
           swift --version
       - run: npm ci
+      - name: Apply temporary Expo JSI workaround
+        run: node scripts/patch-expo-jsi.cjs
       - run: npx expo prebuild --platform ios --no-install
       - name: Install CocoaPods dependencies
         run: pod install --project-directory=ios
